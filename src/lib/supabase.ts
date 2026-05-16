@@ -3,16 +3,46 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+console.log('[v0] Supabase config - URL exists:', !!supabaseUrl, 'Key exists:', !!supabaseAnonKey);
+
+// If env vars are missing, create a placeholder client
+let supabaseClient: any;
+
 if (!supabaseUrl || !supabaseAnonKey) {
-  console.error('[v0] Missing env vars - URL:', supabaseUrl, 'Key:', supabaseAnonKey);
-  throw new Error('Missing Supabase environment variables');
+  console.warn('[v0] Missing Supabase environment variables. Using placeholder client.');
+  // Create a mock client that won't crash the app
+  supabaseClient = {
+    auth: {
+      getSession: async () => ({ data: { session: null } }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+      signUp: async () => { throw new Error('Supabase not configured'); },
+      signInWithPassword: async () => { throw new Error('Supabase not configured'); },
+      signInWithOAuth: async () => { throw new Error('Supabase not configured'); },
+      signOut: async () => { throw new Error('Supabase not configured'); },
+      resetPasswordForEmail: async () => { throw new Error('Supabase not configured'); },
+    },
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: async () => ({ data: null, error: null }),
+        }),
+      }),
+      insert: () => ({
+        select: () => ({
+          maybeSingle: async () => ({ data: null, error: null }),
+        }),
+      }),
+    }),
+  };
+} else {
+  supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
+    auth: {
+      flowType: 'pkce',
+    },
+  });
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    flowType: 'pkce',
-  },
-});
+export const supabase = supabaseClient;
 
 export type Profile = {
   id: string;
