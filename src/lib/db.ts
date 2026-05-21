@@ -1,186 +1,220 @@
-import { sql } from '@vercel/postgres';
+import { Pool, ClientBase } from 'pg'
+import { Signer } from '@aws-sdk/rds-signer'
+import { awsCredentialsProvider } from '@vercel/functions/oidc'
+import { attachDatabasePool } from '@vercel/functions'
 
-export async function initializeDatabase() {
+const signer = new Signer({
+  credentials: awsCredentialsProvider({
+    roleArn: process.env.AWS_ROLE_ARN,
+    clientConfig: { region: process.env.AWS_REGION },
+  }),
+  region: process.env.AWS_REGION,
+  hostname: process.env.PGHOST,
+  username: process.env.PGUSER || 'postgres',
+  port: 5432,
+})
+
+const pool = new Pool({
+  host: process.env.PGHOST,
+  database: process.env.PGDATABASE || 'postgres',
+  port: 5432,
+  user: process.env.PGUSER || 'postgres',
+  password: () => signer.getAuthToken(),
+  ssl: { rejectUnauthorized: false },
+  max: 20,
+})
+
+attachDatabasePool(pool)
+
+// Single query transactions
+export async function query(text: string, params?: unknown[]) {
+  return pool.query(text, params)
+}
+
+// Use for multi-query transactions
+export async function withConnection<T>(
+  fn: (client: ClientBase) => Promise<T>,
+): Promise<T> {
+  const client = await pool.connect()
   try {
-    // Check if users table exists
-    await sql`
-      CREATE TABLE IF NOT EXISTS users (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        email VARCHAR(255) UNIQUE NOT NULL,
-        name VARCHAR(255),
-        password_hash VARCHAR(255),
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `;
-
-    await sql`
-      CREATE TABLE IF NOT EXISTS profiles (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID UNIQUE REFERENCES users(id) ON DELETE CASCADE,
-        website_url VARCHAR(255),
-        google_property_id VARCHAR(255),
-        search_console_property VARCHAR(255),
-        google_oauth_tokens JSONB,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `;
-
-    await sql`
-      CREATE TABLE IF NOT EXISTS audits (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        website_url VARCHAR(255) NOT NULL,
-        status VARCHAR(50) DEFAULT 'pending',
-        performance_score INTEGER,
-        accessibility_score INTEGER,
-        seo_score INTEGER,
-        best_practices_score INTEGER,
-        results JSONB,
-        recommendations JSONB,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `;
-
-    await sql`
-      CREATE TABLE IF NOT EXISTS audit_reports (
-        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        audit_id UUID REFERENCES audits(id) ON DELETE CASCADE,
-        user_id UUID REFERENCES users(id) ON DELETE CASCADE,
-        title VARCHAR(255),
-        description TEXT,
-        findings JSONB,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      );
-    `;
-
-    console.log('[v0] Database schema initialized successfully');
-  } catch (error) {
-    if ((error as any)?.message?.includes('already exists')) {
-      console.log('[v0] Database tables already exist');
-    } else {
-      console.error('[v0] Database initialization error:', error);
-      throw error;
-    }
+    return await fn(client)
+  } finally {
+    client.release()
   }
 }
 
+// Helper function to initialize database schema
+export async function initializeDatabase() {
+  try {
+    // All tables should already be created by the migration scripts
+    // This is just a connection health check
+    const result = await query('SELECT 1')
+    console.log('[v0] Database connection verified')
+  } catch (error) {
+    console.error('[v0] Database connection error:', error)
+    throw error
+  }
+}
+
+// User operations
 export async function getUserByEmail(email: string) {
   try {
-    const result = await sql`
-      SELECT * FROM users WHERE email = ${email}
-    `;
-    return result.rows[0] || null;
+    const result = await query(
+      'SELECT id, email, name, password_hash, role, created_at FROM users WHERE email = $1',
+      [email]
+    )
+    return result.rows[0] || null
   } catch (error) {
-    console.error('[v0] Error fetching user:', error);
-    throw error;
+    console.error('[v0] Error fetching user:', error)
+    throw error
+  }
+}
+
+export async function getUserById(id: string) {
+  try {
+    const result = await query(
+      'SELECT id, email, name, role, created_at FROM users WHERE id = $1',
+      [id]
+    )
+    return result.rows[0] || null
+  } catch (error) {
+    console.error('[v0] Error fetching user by ID:', error)
+    throw error
   }
 }
 
 export async function createUser(email: string, name: string, passwordHash: string) {
   try {
-    const result = await sql`
-      INSERT INTO users (email, name, password_hash)
-      VALUES (${email}, ${name}, ${passwordHash})
-      RETURNING id, email, name, created_at
-    `;
-    return result.rows[0];
+    const result = await query(
+      'INSERT INTO users (email, name, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, created_at',
+      [email, name, passwordHash, 'client']
+    )
+    return result.rows[0]
   } catch (error) {
-    console.error('[v0] Error creating user:', error);
-    throw error;
+    console.error('[v0] Error creating user:', error)
+    throw error
   }
 }
 
+// Profile operations
 export async function getUserProfile(userId: string) {
   try {
-    const result = await sql`
-      SELECT * FROM profiles WHERE user_id = ${userId}
-    `;
-    return result.rows[0] || null;
+    const result = await query(
+      'SELECT * FROM profiles WHERE id = $1',
+      [userId]
+    )
+    return result.rows[0] || null
   } catch (error) {
-    console.error('[v0] Error fetching profile:', error);
-    throw error;
+    console.error('[v0] Error fetching profile:', error)
+    throw error
+  }
+}
+
+export async function createUserProfile(userId: string, businessName?: string, industry?: string, websiteUrl?: string) {
+  try {
+    const result = await query(
+      'INSERT INTO profiles (id, business_name, industry, website_url) VALUES ($1, $2, $3, $4) RETURNING *',
+      [userId, businessName || null, industry || null, websiteUrl || null]
+    )
+    return result.rows[0]
+  } catch (error) {
+    console.error('[v0] Error creating profile:', error)
+    throw error
   }
 }
 
 export async function updateUserProfile(userId: string, profileData: Record<string, any>) {
   try {
-    const setClause = Object.keys(profileData)
-      .map((key, index) => `${key} = $${index + 2}`)
-      .join(', ');
-    
-    const values = Object.values(profileData);
-    
-    const result = await sql`
-      UPDATE profiles 
-      SET ${sql(setClause)}, updated_at = CURRENT_TIMESTAMP
-      WHERE user_id = ${userId}
-      RETURNING *
-    `;
-    return result.rows[0];
+    const updates: string[] = []
+    const values: any[] = [userId]
+    let paramIndex = 2
+
+    for (const [key, value] of Object.entries(profileData)) {
+      updates.push(`${key} = $${paramIndex}`)
+      values.push(value)
+      paramIndex++
+    }
+
+    updates.push(`updated_at = now()`)
+
+    const result = await query(
+      `UPDATE profiles SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    )
+    return result.rows[0]
   } catch (error) {
-    console.error('[v0] Error updating profile:', error);
-    throw error;
+    console.error('[v0] Error updating profile:', error)
+    throw error
+  }
+}
+
+// Audit operations
+export async function getAuditById(auditId: string) {
+  try {
+    const result = await query(
+      'SELECT * FROM audits WHERE id = $1',
+      [auditId]
+    )
+    return result.rows[0] || null
+  } catch (error) {
+    console.error('[v0] Error fetching audit:', error)
+    throw error
   }
 }
 
 export async function getUserAudits(userId: string) {
   try {
-    const result = await sql`
-      SELECT * FROM audits WHERE user_id = ${userId} ORDER BY created_at DESC
-    `;
-    return result.rows;
+    const result = await query(
+      'SELECT * FROM audits WHERE user_id = $1 ORDER BY created_at DESC LIMIT 50',
+      [userId]
+    )
+    return result.rows
   } catch (error) {
-    console.error('[v0] Error fetching audits:', error);
-    throw error;
+    console.error('[v0] Error fetching user audits:', error)
+    throw error
   }
 }
 
-export async function getAuditById(auditId: string) {
+export async function createAudit(
+  userId: string | null,
+  businessName: string,
+  websiteUrl: string,
+  industry: string,
+  businessGoal: string,
+  email: string
+) {
   try {
-    const result = await sql`
-      SELECT * FROM audits WHERE id = ${auditId}
-    `;
-    return result.rows[0] || null;
+    const result = await query(
+      `INSERT INTO audits (user_id, business_name, website_url, industry, business_goal, email, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+      [userId, businessName, websiteUrl, industry, businessGoal, email, 'pending']
+    )
+    return result.rows[0]
   } catch (error) {
-    console.error('[v0] Error fetching audit:', error);
-    throw error;
-  }
-}
-
-export async function createAudit(userId: string | null, websiteUrl: string) {
-  try {
-    const result = await sql`
-      INSERT INTO audits (user_id, website_url, status)
-      VALUES (${userId}, ${websiteUrl}, 'pending')
-      RETURNING *
-    `;
-    return result.rows[0];
-  } catch (error) {
-    console.error('[v0] Error creating audit:', error);
-    throw error;
+    console.error('[v0] Error creating audit:', error)
+    throw error
   }
 }
 
 export async function updateAudit(auditId: string, auditData: Record<string, any>) {
   try {
-    const setClause = Object.keys(auditData)
-      .map((key, index) => `${key} = $${index + 2}`)
-      .join(', ');
-    
-    const values = Object.values(auditData);
-    
-    const result = await sql`
-      UPDATE audits 
-      SET ${sql(setClause)}, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ${auditId}
-      RETURNING *
-    `;
-    return result.rows[0];
+    const updates: string[] = []
+    const values: any[] = [auditId]
+    let paramIndex = 2
+
+    for (const [key, value] of Object.entries(auditData)) {
+      updates.push(`${key} = $${paramIndex}`)
+      values.push(value)
+      paramIndex++
+    }
+
+    const result = await query(
+      `UPDATE audits SET ${updates.join(', ')} WHERE id = $1 RETURNING *`,
+      values
+    )
+    return result.rows[0]
   } catch (error) {
-    console.error('[v0] Error updating audit:', error);
-    throw error;
+    console.error('[v0] Error updating audit:', error)
+    throw error
   }
 }

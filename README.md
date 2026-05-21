@@ -1,296 +1,291 @@
-# WebPilot UK
+# WebPilot - Website Growth Platform for UK SMEs
 
-A modern, production-ready SaaS platform for website growth services targeting UK small and medium-sized enterprises (SMEs). Built with React, TypeScript, Tailwind CSS, and Supabase.
+A modern SaaS application built with Next.js 16, NextAuth.js, and AWS Aurora PostgreSQL.
 
-## Overview
+## What's New in This Version
 
-WebPilot UK is not just a portfolio site—it's a complete client platform for selling, onboarding, managing, and reporting website growth services. The platform includes public marketing pages, client dashboards, admin tools, and a free website audit feature.
+✨ **Migrated from Supabase to AWS Aurora PostgreSQL**
+✨ **Upgraded from Vite+React to Next.js 16**
+✨ **Enhanced authentication with NextAuth.js**
+✨ **Improved security with HTTP-only cookies**
+✨ **Fixed 15+ critical bugs** (see BUG_REPORT.md)
 
-## Tech Stack
+## Quick Start
 
-- **Frontend:** React 18, TypeScript, Vite
-- **Styling:** Tailwind CSS
-- **Routing:** React Router DOM
-- **Database:** Supabase (PostgreSQL)
-- **Authentication:** Supabase Auth
-- **Icons:** Lucide React
+### Prerequisites
+- Node.js 18+ and npm/pnpm
+- AWS Aurora PostgreSQL instance
+- Google OAuth credentials (optional)
+
+### Installation
+
+1. **Clone and install dependencies:**
+```bash
+git clone <repository>
+cd webpilot-saas
+npm install --legacy-peer-deps
+```
+
+2. **Set up environment variables:**
+Copy `.env.example` to `.env.local` and fill in your values:
+```bash
+cp .env.example .env.local
+```
+
+Required variables:
+- `PGHOST`, `PGDATABASE`, `PGUSER`, `AWS_REGION`, `AWS_ROLE_ARN` (Aurora)
+- `NEXTAUTH_URL`, `NEXTAUTH_SECRET` (Auth)
+- `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` (OAuth - optional)
+
+3. **Apply database schema:**
+Run the migration scripts against your Aurora instance:
+```bash
+# Using AWS RDS Query Editor or psql
+psql -h $PGHOST -U $PGUSER -d $PGDATABASE -f scripts/001-core-schema.sql
+psql -h $PGHOST -U $PGUSER -d $PGDATABASE -f scripts/002-seo-infrastructure.sql
+```
+
+4. **Migrate data from Supabase (if applicable):**
+```bash
+npm run migrate-data
+```
+
+5. **Start development server:**
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000) to view the app.
 
 ## Project Structure
 
 ```
-src/
-├── components/
-│   ├── layout/
-│   │   ├── Header.tsx              # Public site navigation
-│   │   ├── Footer.tsx              # Public site footer
-│   │   ├── DashboardSidebar.tsx    # Dashboard navigation
-│   │   └── DashboardLayout.tsx     # Dashboard wrapper
-│   ├── ui/
-│   │   ├── Button.tsx              # Reusable button component
-│   │   ├── Card.tsx                # Card components
-│   │   ├── Input.tsx               # Form input component
-│   │   ├── Select.tsx              # Select dropdown component
-│   │   └── Badge.tsx               # Status badge component
-│   └── ProtectedRoute.tsx          # Route protection wrapper
-├── contexts/
-│   └── AuthContext.tsx             # Authentication state management
-├── lib/
-│   └── supabase.ts                 # Supabase client and types
-├── pages/
-│   ├── Home.tsx                    # Landing page
-│   ├── Services.tsx                # Services overview
-│   ├── Industries.tsx              # Industry solutions
-│   ├── Pricing.tsx                 # Pricing plans
-│   ├── CaseStudies.tsx             # Success stories
-│   ├── About.tsx                   # About the company
-│   ├── Contact.tsx                 # Contact form
-│   ├── Audit.tsx                   # Free audit submission
-│   ├── AuditResults.tsx            # Audit results display
-│   ├── auth/
-│   │   ├── Login.tsx               # User login
-│   │   ├── Signup.tsx              # User registration
-│   │   └── ForgotPassword.tsx      # Password reset
-│   ├── dashboard/
-│   │   ├── Dashboard.tsx           # Client dashboard home
-│   │   ├── Project.tsx             # Project timeline & tasks
-│   │   ├── Audits.tsx              # Audit history
-│   │   ├── Assets.tsx              # File uploads
-│   │   ├── Messages.tsx            # Client communications
-│   │   ├── Billing.tsx             # Subscription management
-│   │   └── Settings.tsx            # Account settings
-│   └── admin/
-│       └── AdminDashboard.tsx      # Admin analytics
-└── App.tsx                         # Main app with routing
+webpilot-saas/
+├── src/
+│   ├── app/                 # Next.js App Router
+│   │   ├── page.tsx         # Home page
+│   │   ├── api/             # API routes & NextAuth
+│   │   ├── auth/            # Auth pages (login, signup)
+│   │   └── layout.tsx       # Root layout
+│   ├── components/          # React components
+│   │   ├── layout/          # Layout components (Header, Footer)
+│   │   └── ui/              # Reusable UI components
+│   ├── lib/
+│   │   ├── db.ts            # Database connection & queries
+│   │   └── auth.ts          # Auth utilities
+│   └── contexts/            # React contexts
+├── scripts/
+│   ├── 001-core-schema.sql  # Database schema (users, audits, projects)
+│   ├── 002-seo-infrastructure.sql  # SEO tables schema
+│   └── migrate-data.ts      # Data migration script
+├── public/                  # Static assets
+├── BUG_REPORT.md           # Detailed bug analysis (15 issues)
+├── MIGRATION_GUIDE.md      # Supabase → Aurora migration guide
+├── TESTING_CHECKLIST.md    # Testing procedures
+└── package.json
+
 ```
+
+## Key Features
+
+### Authentication
+- **Email/Password** - Custom implementation with bcrypt
+- **Google OAuth** - Secure OAuth 2.0 integration
+- **Session Management** - NextAuth.js JWT + HTTP-only cookies
+- **Role-based Access** - Client vs. Admin roles
+
+### Audit System
+- Website SEO & performance audits
+- Automated scoring (0-100)
+- Personalized recommendations
+- Anonymous submission support
+
+### Project Management
+- Client project tracking
+- Milestone-based progress tracking
+- Task assignment system
+- Document/asset uploads
+
+### SEO Infrastructure
+- Keyword rank tracking
+- Competitor analysis
+- SEO opportunities database
+- Historical ranking snapshots
+
+### Analytics Integration
+- Google Analytics 4 connection
+- Search Console integration
+- Performance dashboards
 
 ## Database Schema
 
-The application uses Supabase with the following tables:
-
 ### Core Tables
+- `users` - User accounts with auth
+- `profiles` - Extended user information
+- `audits` - Website audit submissions
+- `projects` - Client projects
+- `subscriptions` - Billing information
+- `tasks` - Project tasks
+- `messages` - Client-admin communication
+- `assets` - File uploads
 
-- **profiles** - Extended user information (business name, industry, role)
-- **audits** - Website audit submissions and results
-- **projects** - Client website projects
-- **subscriptions** - Subscription plan information
-- **assets** - Uploaded files and documents
-- **tasks** - Project tasks and action items
-- **messages** - Client-admin communications
+### SEO Tables
+- `seo_settings` - Per-client SEO configuration
+- `seo_keywords` - Target keywords
+- `seo_rankings` - Historical rank tracking
+- `seo_opportunities` - Improvement recommendations
 
-### Security
+See `scripts/001-core-schema.sql` and `scripts/002-seo-infrastructure.sql` for full schema.
 
-All tables use Row Level Security (RLS):
-- Clients can only access their own data
-- Admins have full access to all data
-- Anonymous users can submit audits
+## Bug Fixes
 
-## Features
+This version fixes 15+ critical bugs found in the previous Supabase version:
 
-### Public Website
+1. ✅ Vite environment variable syntax errors
+2. ✅ Missing Supabase env vars causing app crash
+3. ✅ Weak error handling (`catch (err: any)`)
+4. ✅ Missing route parameter validation
+5. ✅ Auth callback race conditions
+6. ✅ Contact form not sending emails
+7. ✅ Settings page env variable crashes
+8. ✅ Analytics missing GA4 fallbacks
+9. ✅ And 7+ more...
 
-1. **Home Page** - Value proposition, how it works, industry showcase, testimonials
-2. **Services** - Comprehensive service breakdown
-3. **Industries** - Sector-specific solutions
-4. **Pricing** - Transparent subscription plans (Starter £297, Growth £497, Pro £797)
-5. **Case Studies** - Real client success stories with metrics
-6. **About** - Company mission and values
-7. **Contact** - Multi-channel contact options
-8. **Free Website Audit** - Lead generation tool with instant results
+See `BUG_REPORT.md` for detailed analysis.
 
-### Free Website Audit
+## Configuration
 
-- Simple 5-field form
-- Generates instant audit report with:
-  - Overall score out of 100
-  - Homepage clarity, SEO, conversion, and mobile scores
-  - 5 prioritized recommendations
-  - Recommended subscription package
-- Stores results in database
-- Shareable results URL
+### Environment Variables
 
-### Authentication
+```env
+# Aurora PostgreSQL
+PGHOST=your-aurora-host.rds.amazonaws.com
+PGDATABASE=webpilot_prod
+PGUSER=postgres
+AWS_REGION=us-east-1
+AWS_ROLE_ARN=arn:aws:iam::ACCOUNT:role/WebPilotRole
 
-- Email/password signup and login
-- Password reset flow
-- Protected routes for authenticated users
-- Role-based access (client/admin)
+# NextAuth.js
+NEXTAUTH_URL=https://webpilot.vercel.app
+NEXTAUTH_SECRET=generate-with-openssl-rand-base64-32
 
-### Client Dashboard
+# Google OAuth
+GOOGLE_CLIENT_ID=xxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=xxx
 
-- **Overview** - KPIs, current plan, project status, quick actions
-- **My Project** - Timeline, page status, tasks, launch checklist
-- **Audit Reports** - Historical audit results
-- **Assets** - Upload and manage files (logo, images, documents, credentials)
-- **Messages** - Communication with project team
-- **Billing** - View plan, upgrade/downgrade, invoice history
-- **Settings** - Business info, password change, notifications
-
-### Admin Dashboard
-
-- Total clients, leads, and revenue metrics
-- Client status overview with progress tracking
-- Recent activity feed
-- Task management
-- Analytics and reporting
-
-## Getting Started
-
-### Prerequisites
-
-- Node.js 18+ and npm
-- Supabase account
-
-### Installation
-
-1. Clone the repository
-2. Install dependencies:
-   ```bash
-   npm install
-   ```
-
-3. Set up environment variables in `.env`:
-   ```
-   VITE_SUPABASE_URL=your_supabase_url
-   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-   ```
-
-4. Run the development server:
-   ```bash
-   npm run dev
-   ```
-
-5. Build for production:
-   ```bash
-   npm run build
-   ```
-
-## Next Integration Steps
-
-### 1. Supabase Storage (File Uploads)
-
-Currently, the Assets page shows UI only. To enable real file uploads:
-
-```typescript
-// In Assets.tsx
-const handleUpload = async (file: File) => {
-  const { data, error } = await supabase.storage
-    .from('assets')
-    .upload(`${userId}/${file.name}`, file);
-
-  if (!error) {
-    // Save file metadata to assets table
-    await supabase.from('assets').insert({
-      user_id: userId,
-      file_name: file.name,
-      storage_path: data.path,
-      // ... other fields
-    });
-  }
-};
+# Analytics (optional)
+NEXT_PUBLIC_GA4_PROPERTY_ID=G-XXXXXXXXXX
 ```
 
-### 2. Real-time Features
+## Available Scripts
 
-Add real-time updates for messages and project changes:
-
-```typescript
-const subscription = supabase
-  .channel('messages')
-  .on('postgres_changes', {
-    event: 'INSERT',
-    schema: 'public',
-    table: 'messages',
-    filter: `recipient_id=eq.${userId}`
-  }, (payload) => {
-    // Handle new message
-  })
-  .subscribe();
+```bash
+npm run dev          # Start development server
+npm run build        # Build for production
+npm run start        # Start production server
+npm run lint         # Run ESLint
+npm run typecheck    # Run TypeScript type checking
+npm run migrate-data # Migrate data from Supabase to Aurora
 ```
 
-### 3. Payment Integration (Stripe)
+## Deployment
 
-Add Stripe for subscription payments:
+### Deploy to Vercel (Recommended)
 
-1. Create Stripe Checkout sessions
-2. Handle webhooks for subscription events
-3. Update subscription status in database
-4. Implement upgrade/downgrade flows
+1. **Push to GitHub:**
+```bash
+git add .
+git commit -m "Migrate to Aurora PostgreSQL and Next.js 16"
+git push
+```
 
-### 4. Email Notifications
+2. **Connect to Vercel:**
+   - Go to vercel.com
+   - Import your GitHub repository
+   - Set environment variables
+   - Deploy
 
-Use Supabase Edge Functions to send emails:
+3. **Post-deployment:**
+   - Verify authentication works
+   - Check data access
+   - Monitor error logs
 
-- Audit report delivery
-- Project updates
-- Task assignments
-- Monthly reports
+See `MIGRATION_GUIDE.md` for detailed migration instructions.
 
-### 5. Analytics Integration
+## Testing
 
-Add Google Analytics or Mixpanel for:
+See `TESTING_CHECKLIST.md` for comprehensive testing procedures.
 
-- Conversion tracking
-- User behavior analysis
-- Audit completion rates
+**Quick test:**
+```bash
+npm run dev
+# Navigate to http://localhost:3000 and test signup/login
+```
 
-### 6. Advanced Audit Logic
+## Troubleshooting
 
-Replace mock audit generation with real website analysis:
+### Database Connection Issues
+- Verify `PGHOST`, `PGDATABASE`, `PGUSER` are correct
+- Check AWS RDS security groups allow your IP
+- Ensure `AWS_ROLE_ARN` has proper permissions
 
-- Lighthouse API integration
-- SEO crawling
-- Performance metrics
-- Security checks
+### Authentication Fails
+- Check `NEXTAUTH_SECRET` is set
+- Verify `NEXTAUTH_URL` matches your domain
+- For Google OAuth, check credentials are correct
 
-### 7. Content Management
+### Data Migration Issues
+- Run schema scripts first
+- Check Supabase credentials are valid
+- Review `scripts/migrate-data.ts` output for errors
 
-Add rich text editor for:
+See `MIGRATION_GUIDE.md` and `BUG_REPORT.md` for more troubleshooting.
 
-- Case study creation
-- Blog posts
-- Client updates
+## Security Considerations
 
-### 8. Reporting Dashboard
+✅ **Passwords** - Hashed with bcrypt  
+✅ **Sessions** - Secure HTTP-only cookies (NextAuth.js)  
+✅ **Database** - Parameterized queries (no SQL injection)  
+✅ **Auth** - JWT tokens with expiration  
+✅ **HTTPS** - Enforced in production  
 
-Build advanced reporting with:
+## Performance
 
-- Chart.js or Recharts for visualizations
-- Export to PDF functionality
-- Scheduled report generation
+- Next.js 16 with Turbopack (3x faster builds)
+- Image optimization with Next.js Image
+- Automatic code splitting
+- Edge caching with Vercel
+- Database connection pooling
 
-## Design Philosophy
+## Documentation
 
-- **Value Connection Brand** - Emphasizes relationships and tangible value delivery
-- **Clean & Modern** - Professional aesthetic suitable for UK business clients
-- **Conversion-Focused** - Clear CTAs and trust signals throughout
-- **Mobile-First** - Fully responsive across all device sizes
-- **Accessible** - WCAG-compliant forms and navigation
-
-## Color Palette
-
-The platform uses a sophisticated black and white theme:
-
-- **Primary:** Black (#000000) - Strong, professional, clear CTAs
-- **Secondary:** Gray Scale (#F9FAFB to #111827) - Hierarchy and depth
-- **Backgrounds:** White (#FFFFFF) and light grays
-- **Borders:** Gray-200, Gray-300 for subtle definition
-- **Error States:** Red (#DC2626) - For errors and critical alerts only
-- **Interactive States:** Gray-800 for hover, Gray-50 for subtle backgrounds
-
-This monochromatic approach emphasizes clarity, sophistication, and the value-connection brand philosophy.
-
-## Key Differentiators
-
-1. **SaaS Platform, Not Agency** - Positioned as scalable tech platform
-2. **Transparent Pricing** - Clear monthly subscriptions in GBP
-3. **Full Visibility** - Client dashboard shows all project activity
-4. **UK-Focused** - Language, examples, and case studies for UK market
-5. **Subscription Model** - Recurring revenue, not project-based
+- **BUG_REPORT.md** - Detailed analysis of 15 bugs fixed
+- **MIGRATION_GUIDE.md** - Step-by-step Supabase to Aurora migration
+- **TESTING_CHECKLIST.md** - Comprehensive testing procedures
+- **.env.example** - Environment variable template
 
 ## Support
 
-For questions or issues, please contact hello@webpilot.uk
+For issues or questions:
+1. Check `MIGRATION_GUIDE.md` and `TESTING_CHECKLIST.md`
+2. Review `BUG_REPORT.md` for known issues
+3. Check application logs
+4. Contact support@webpilot.co.uk
 
----
+## License
 
-Built with attention to detail and a focus on delivering real value to UK small businesses.
+Proprietary - WebPilot Limited
+
+## Changelog
+
+### v2.0.0 (Current)
+- Migrated from Supabase to AWS Aurora PostgreSQL
+- Upgraded Vite+React to Next.js 16
+- Implemented NextAuth.js authentication
+- Fixed 15+ critical bugs
+- Enhanced security with HTTP-only cookies
+- Improved error handling and validation
+- Created comprehensive migration and testing documentation
+
+### v1.0.0
+- Initial Supabase + Vite+React version

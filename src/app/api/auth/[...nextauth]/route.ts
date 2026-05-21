@@ -1,7 +1,7 @@
 import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { sql } from "@vercel/postgres";
+import { query } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
@@ -18,9 +18,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         }
 
         try {
-          const result = await sql`
-            SELECT id, email, name, password_hash FROM users WHERE email = ${credentials.email}
-          `;
+          const result = await query(
+            'SELECT id, email, name, password_hash FROM users WHERE email = $1',
+            [credentials.email]
+          );
 
           if (result.rows.length === 0) return null;
 
@@ -38,7 +39,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             name: user.name,
           };
         } catch (error) {
-          console.error("Auth error:", error);
+          console.error("[v0] Auth error:", error);
           return null;
         }
       },
@@ -61,6 +62,10 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/auth/login",
     error: "/auth/error",
+  },
+  session: {
+    strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
 });
 
