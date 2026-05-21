@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { query } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
-export const { auth, handlers, signIn, signOut } = NextAuth({
+const handler = NextAuth({
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID || "",
@@ -65,8 +65,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   },
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
+    maxAge: 30 * 24 * 60 * 60,
   },
 });
 
-export const { GET, POST } = handlers;
+export { handler as GET, handler as POST };
