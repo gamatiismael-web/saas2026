@@ -1,4 +1,6 @@
-import { Link } from 'react-router-dom';
+'use client';
+
+import Link from 'next/link';
 import { Menu, X } from 'lucide-react';
 import { useState } from 'react';
 import { Button } from '../ui/Button';
@@ -17,7 +19,7 @@ export function Header() {
     <header className="fixed top-0 left-0 right-0 bg-black/95 backdrop-blur-sm border-b border-gray-800 z-50">
       <nav className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <Link to="/" className="flex items-center">
+          <Link href="/" className="flex items-center">
             <span
               style={{ fontFamily: "'Space Grotesk', sans-serif", letterSpacing: '-0.02em' }}
               className="text-2xl font-bold text-white tracking-tight"
@@ -30,7 +32,7 @@ export function Header() {
             {navigation.map((item) => (
               <Link
                 key={item.name}
-                to={item.href}
+                href={item.href}
                 className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
               >
                 {item.name}
@@ -39,12 +41,12 @@ export function Header() {
           </div>
 
           <div className="hidden md:flex items-center space-x-4">
-            <Link to="/signup">
+            <Link href="/auth/signup">
               <Button variant="outline" size="sm">
                 Sign Up
               </Button>
             </Link>
-            <Link to="/login">
+            <Link href="/auth/login">
               <Button size="sm">Client Login</Button>
             </Link>
           </div>
@@ -67,19 +69,19 @@ export function Header() {
               {navigation.map((item) => (
                 <Link
                   key={item.name}
-                  to={item.href}
+                  href={item.href}
                   className="text-gray-300 hover:text-white transition-colors px-2 py-1"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   {item.name}
                 </Link>
               ))}
-              <Link to="/signup" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/auth/signup" onClick={() => setMobileMenuOpen(false)}>
                 <Button variant="outline" size="sm" fullWidth>
                   Sign Up
                 </Button>
               </Link>
-              <Link to="/login" onClick={() => setMobileMenuOpen(false)}>
+              <Link href="/auth/login" onClick={() => setMobileMenuOpen(false)}>
                 <Button size="sm" fullWidth>
                   Client Login
                 </Button>
