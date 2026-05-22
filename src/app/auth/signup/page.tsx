@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
@@ -63,6 +64,17 @@ export default function SignupPage() {
       console.error('[v0] Signup error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
+      setIsLoading(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setIsLoading(true);
+    try {
+      await signIn('google', { callbackUrl: '/dashboard' });
+    } catch (err) {
+      console.error('[v0] Google sign in error:', err);
+      setError(err instanceof Error ? err.message : 'Google sign in failed');
       setIsLoading(false);
     }
   }
@@ -145,6 +157,25 @@ export default function SignupPage() {
               {isLoading ? 'Creating account...' : 'Create Account'}
             </Button>
           </form>
+
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-700"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-gray-900 text-gray-400">Or sign up with</span>
+            </div>
+          </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            fullWidth
+            onClick={handleGoogleSignIn}
+            disabled={isLoading}
+          >
+            Sign up with Google
+          </Button>
 
           <p className="text-center text-sm text-gray-400 mt-6">
             Already have an account?{' '}

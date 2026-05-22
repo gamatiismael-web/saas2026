@@ -46,6 +46,30 @@ const handler = NextAuth({
     }),
   ],
   callbacks: {
+    async signIn({ user, account }) {
+      // For Google OAuth, create user in database if they don't exist
+      if (account?.provider === 'google' && user.email) {
+        try {
+          // Check if user exists
+          const existingUser = await query(
+            'SELECT id FROM users WHERE email = $1',
+            [user.email]
+          );
+
+          // If user doesn't exist, create them
+          if (existingUser.rows.length === 0) {
+            await query(
+              'INSERT INTO users (email, name, role) VALUES ($1, $2, $3) ON CONFLICT (email) DO NOTHING',
+              [user.email, user.name || user.email, 'client']
+            );
+          }
+        } catch (error) {
+          console.error('[v0] Error creating user from Google OAuth:', error);
+          // Still allow sign in even if database error
+        }
+      }
+      return true;
+    },
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
