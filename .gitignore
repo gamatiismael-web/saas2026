@@ -21,3 +21,19 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Old Vite project structure (migrated to Next.js)
+src/pages/
+src/contexts/
+src/vite-env.d.ts
+src/main.tsx
+src/index.css
+vite.config.ts
+tsconfig.app.json
+tsconfig.node.json
+
+# Next.js
+.next/
+out/
+build/
+

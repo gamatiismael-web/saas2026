@@ -19,6 +19,19 @@ export default function SignupPage() {
     e.preventDefault();
     setError('');
 
+    // Validate required fields
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setError('All fields are required');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+
     if (password !== confirmPassword) {
       setError('Passwords do not match');
       return;
