@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -15,6 +15,19 @@ export default function SignupPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [hasGoogle, setHasGoogle] = useState(false);
+
+  useEffect(() => {
+    // Check if Google provider is available
+    fetch('/api/auth/providers')
+      .then((res) => res.json())
+      .then((providers) => {
+        setHasGoogle(!!providers.google);
+      })
+      .catch((err) => {
+        console.error('[v0] Error fetching providers:', err);
+      });
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -167,15 +180,21 @@ export default function SignupPage() {
             </div>
           </div>
 
-          <Button
-            type="button"
-            variant="outline"
-            fullWidth
-            onClick={handleGoogleSignIn}
-            disabled={isLoading}
-          >
-            Sign up with Google
-          </Button>
+          {hasGoogle ? (
+            <Button
+              type="button"
+              variant="outline"
+              fullWidth
+              onClick={handleGoogleSignIn}
+              disabled={isLoading}
+            >
+              Sign up with Google
+            </Button>
+          ) : (
+            <p className="text-sm text-gray-500 text-center py-4">
+              Google signup not configured
+            </p>
+          )}
 
           <p className="text-center text-sm text-gray-400 mt-6">
             Already have an account?{' '}
