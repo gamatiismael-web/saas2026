@@ -86,7 +86,7 @@ export async function getUserById(id: string) {
 export async function createUser(email: string, name: string, passwordHash: string) {
   try {
     const result = await query(
-      'INSERT INTO users (email, name, password_hash, role) VALUES ($1, $2, $3, $4) RETURNING id, email, name, created_at',
+      'INSERT INTO users (id, email, name, password_hash, role) VALUES (gen_random_uuid()::text, $1, $2, $3, $4) RETURNING id, email, name, created_at',
       [email, name, passwordHash, 'client']
     )
     return result.rows[0]

@@ -2,7 +2,7 @@
 
 -- Create users table (replacing Supabase auth.users)
 CREATE TABLE IF NOT EXISTS users (
-  id VARCHAR(36) PRIMARY KEY,
+  id VARCHAR(36) PRIMARY KEY DEFAULT gen_random_uuid()::text,
   email VARCHAR(255) NOT NULL UNIQUE,
   name VARCHAR(255),
   password_hash VARCHAR(255),
