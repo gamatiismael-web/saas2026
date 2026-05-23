@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { AuthSessionProvider } from "@/components/providers/SessionProvider";
 import "./globals.css";
 
 const geistSans = Geist({ subsets: ["latin"] });
@@ -27,7 +28,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="bg-black" suppressHydrationWarning>
       <body className={`${geistSans.className} antialiased`}>
-        {children}
+        <AuthSessionProvider>
+          {children}
+        </AuthSessionProvider>
       </body>
     </html>
   );
