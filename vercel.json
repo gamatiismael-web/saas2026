@@ -1,0 +1,19 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/aggregate-hourly",
+      "schedule": "0,30 * * * *",
+      "description": "Aggregate metrics every 30 minutes"
+    },
+    {
+      "path": "/api/cron/aggregate-daily",
+      "schedule": "0 1 * * *",
+      "description": "Daily metrics aggregation and cleanup (1:00 AM UTC)"
+    },
+    {
+      "path": "/api/cron/health-check",
+      "schedule": "0 */6 * * *",
+      "description": "Health check websites every 6 hours"
+    }
+  ]
+}
