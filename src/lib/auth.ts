@@ -1,16 +1,13 @@
 import { getServerSession } from "next-auth";
-import { handler } from "@/app/api/auth/[...nextauth]/route";
+import { authConfig } from "@/lib/auth-config";
 
-// Get the current session - NextAuth automatically detects the route handler
+// Get the current session
 export async function getAuthSession() {
   try {
-    const session = await getServerSession(handler);
+    const session = await getServerSession(authConfig);
     return session;
   } catch (error) {
     console.error('[v0] Error getting auth session:', error);
     return null;
   }
 }
-
-// Re-export for use in API routes
-export { handler };
