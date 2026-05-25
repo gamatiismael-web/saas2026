@@ -1,5 +1,5 @@
 import { getServerSession } from "next-auth";
-import { handler } from "./[...nextauth]/route";
+import { handler } from "@/app/api/auth/[...nextauth]/route";
 
 // Get the current session
 export async function getAuthSession() {
