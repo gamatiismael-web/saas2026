@@ -90,12 +90,28 @@ export function useCreateWebsite() {
         body: JSON.stringify({ url, name, description }),
       });
 
+      if (!response.ok) {
+        const text = await response.text();
+        
+        // Try to parse as JSON
+        try {
+          const data = JSON.parse(text);
+          setError(data.message || `Error: ${response.status}`);
+          return null;
+        } catch (e) {
+          // If not JSON, it's likely an error page
+          setError(`Server error (${response.status}). Please check your connection and try again.`);
+          return null;
+        }
+      }
+
       const data = await response.json();
       
       if (data.status === 'success') {
         return data.website;
       } else {
-        setError(data.message || 'Failed to create website');
+        const errorMsg = data.message || 'Failed to create website';
+        setError(errorMsg);
         return null;
       }
     } catch (err) {

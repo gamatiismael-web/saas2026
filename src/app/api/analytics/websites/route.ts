@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
-import { createWebsite, getWebsitesByUser, getWebsite } from '@/lib/analytics';
+import { createWebsite, getWebsitesByUser } from '@/lib/analytics';
+import { query } from '@/lib/db';
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,8 +23,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate URL format
+    let validatedUrl = data.url.trim();
+    if (!validatedUrl.startsWith('http://') && !validatedUrl.startsWith('https://')) {
+      validatedUrl = 'https://' + validatedUrl;
+    }
+
+    try {
+      new URL(validatedUrl);
+    } catch (e) {
+      return NextResponse.json(
+        { status: 'error', message: 'Invalid URL format. Please include a valid domain.' },
+        { status: 400 }
+      );
+    }
+
     // Get user ID from email
-    const { query } = await import('@/lib/db');
     const userResult = await query(
       'SELECT id FROM users WHERE email = $1',
       [session.user.email]
@@ -37,7 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     const userId = userResult.rows[0].id;
-    const website = await createWebsite(userId, data.url, data.name, data.description);
+    const website = await createWebsite(userId, validatedUrl, data.name, data.description);
 
     return NextResponse.json({
       status: 'success',
@@ -45,8 +60,9 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('[v0] Website creation error:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { status: 'error', message: 'Failed to create website' },
+      { status: 'error', message: `Failed to create website: ${errorMsg}` },
       { status: 500 }
     );
   }
@@ -64,7 +80,6 @@ export async function GET(request: NextRequest) {
     }
 
     // Get user ID from email
-    const { query } = await import('@/lib/db');
     const userResult = await query(
       'SELECT id FROM users WHERE email = $1',
       [session.user.email]
@@ -86,8 +101,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('[v0] Get websites error:', error);
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     return NextResponse.json(
-      { status: 'error', message: 'Failed to fetch websites' },
+      { status: 'error', message: `Failed to fetch websites: ${errorMsg}` },
       { status: 500 }
     );
   }
