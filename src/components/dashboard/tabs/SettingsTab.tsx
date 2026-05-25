@@ -1,10 +1,22 @@
 'use client';
 
+import { useState, useEffect } from 'react';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { Badge } from '@/components/ui/Badge';
+import { AddWebsiteModal } from '@/components/analytics/AddWebsiteModal';
+import { useWebsites } from '@/hooks/useAnalytics';
 
 export function SettingsTab() {
+  const [isAddWebsiteOpen, setIsAddWebsiteOpen] = useState(false);
+  const { websites, loading, refetch } = useWebsites();
+
+  const handleWebsiteAdded = () => {
+    setIsAddWebsiteOpen(false);
+    refetch();
+  };
+
   return (
     <div className="space-y-8">
       <h2 className="text-2xl font-bold text-white">Settings</h2>
@@ -34,11 +46,39 @@ export function SettingsTab() {
             <h3 className="text-lg font-bold text-white">Websites</h3>
           </CardHeader>
           <CardBody className="space-y-4">
-            <div className="bg-gray-800 p-3 rounded-lg">
-              <p className="text-white font-semibold">example.com</p>
-              <p className="text-gray-400 text-sm">Active • Added 2 weeks ago</p>
-            </div>
-            <Button variant="outline" fullWidth>
+            {loading ? (
+              <div className="text-gray-400 text-sm py-4">Loading websites...</div>
+            ) : websites && websites.length > 0 ? (
+              <>
+                {websites.map((website) => (
+                  <div key={website.id} className="bg-gray-800 p-3 rounded-lg">
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <p className="text-white font-semibold text-sm">{website.name}</p>
+                        <p className="text-gray-400 text-xs">{website.domain}</p>
+                        <div className="flex items-center gap-2 mt-2">
+                          <Badge 
+                            variant={website.status === 'active' ? 'success' : 'warning'}
+                          >
+                            {website.status}
+                          </Badge>
+                          {website.metrics_collection_status === 'active' && (
+                            <Badge variant="info">Tracking</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            ) : (
+              <div className="text-gray-400 text-sm py-4">No websites added yet</div>
+            )}
+            <Button 
+              variant="outline" 
+              fullWidth
+              onClick={() => setIsAddWebsiteOpen(true)}
+            >
               Add Website
             </Button>
           </CardBody>
@@ -52,7 +92,7 @@ export function SettingsTab() {
           <CardBody className="space-y-4">
             {['Google Search Console', 'Google Analytics', 'Slack'].map((integration) => (
               <div key={integration} className="flex items-center justify-between">
-                <span className="text-gray-300">{integration}</span>
+                <span className="text-gray-300 text-sm">{integration}</span>
                 <Button variant="ghost" size="sm">Connect</Button>
               </div>
             ))}
@@ -82,6 +122,13 @@ export function SettingsTab() {
           </div>
         </CardBody>
       </Card>
+
+      {/* Add Website Modal */}
+      <AddWebsiteModal 
+        isOpen={isAddWebsiteOpen}
+        onClose={() => setIsAddWebsiteOpen(false)}
+        onSuccess={handleWebsiteAdded}
+      />
     </div>
   );
 }
