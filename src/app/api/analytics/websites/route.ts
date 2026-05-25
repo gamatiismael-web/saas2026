@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getAuthSession } from '@/lib/auth';
 import { createWebsite, getWebsitesByUser, getWebsite } from '@/lib/analytics';
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getAuthSession();
     
     if (!session?.user?.email) {
       return NextResponse.json(
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getAuthSession();
     
     if (!session?.user?.email) {
       return NextResponse.json(

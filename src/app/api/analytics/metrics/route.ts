@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth/next';
+import { getAuthSession } from '@/lib/auth';
 import { getWebsiteMetrics } from '@/lib/analytics';
 import { query } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession();
+    const session = await getAuthSession();
     
     if (!session?.user?.email) {
       return NextResponse.json(
