@@ -57,7 +57,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-export const { handlers, signIn, signOut, auth } = NextAuth({
+export const handler = NextAuth({
   providers,
   callbacks: {
     async signIn({ user, account }) {
@@ -106,3 +106,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     maxAge: 30 * 24 * 60 * 60,
   },
 });
+
+export async function getAuthSession() {
+  return await import('next-auth').then(mod => 
+    mod.getServerSession(handler)
+  );
+}
