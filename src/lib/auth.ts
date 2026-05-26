@@ -1,10 +1,9 @@
-import { getServerSession } from "next-auth";
-import { authConfig } from "@/lib/auth-config";
+import { auth } from "@/lib/auth-config";
 
 // Get the current session
 export async function getAuthSession() {
   try {
-    const session = await getServerSession(authConfig);
+    const session = await auth();
     return session;
   } catch (error) {
     console.error('[v0] Error getting auth session:', error);

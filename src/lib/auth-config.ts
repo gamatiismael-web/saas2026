@@ -7,6 +7,11 @@ import bcrypt from "bcryptjs";
 // Build providers array - only include Google if credentials are provided
 const providers = [
   CredentialsProvider({
+    name: 'Credentials',
+    credentials: {
+      email: { label: "Email", type: "email" },
+      password: { label: "Password", type: "password" }
+    },
     async authorize(credentials) {
       if (!credentials?.email || !credentials?.password) {
         return null;
@@ -52,7 +57,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-export const authConfig = NextAuth({
+export const { handlers, signIn, signOut, auth } = NextAuth({
   providers,
   callbacks: {
     async signIn({ user, account }) {

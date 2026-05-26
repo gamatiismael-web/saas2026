@@ -1,6 +1,3 @@
-import { authConfig } from "@/lib/auth-config";
+import { handlers } from "@/lib/auth-config";
 
-const handler = authConfig;
-
-export const GET = handler;
-export const POST = handler;
+export const { GET, POST } = handlers;
