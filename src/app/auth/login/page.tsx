@@ -50,18 +50,12 @@ export default function LoginPage() {
       const result = await signIn('credentials', {
         email,
         password,
-        redirect: false,
+        redirect: true,
+        callbackUrl: '/dashboard',
       });
-
-      if (result?.error) {
-        setError(result.error || 'Invalid credentials');
-      } else if (result?.ok) {
-        router.push('/dashboard');
-      }
     } catch (err) {
       console.error('[v0] Login error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
-    } finally {
       setIsLoading(false);
     }
   }
