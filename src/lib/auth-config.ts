@@ -57,7 +57,8 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   );
 }
 
-export const handler = NextAuth({
+// Create the auth options config
+export const authOptions = {
   providers,
   callbacks: {
     async signIn({ user, account }) {
@@ -92,7 +93,7 @@ export const handler = NextAuth({
     },
     async session({ session, token }) {
       if (session.user) {
-        session.user.id = token.id as string;
+        (session.user as any).id = token.id as string;
       }
       return session;
     },
@@ -102,13 +103,16 @@ export const handler = NextAuth({
     error: "/auth/error",
   },
   session: {
-    strategy: "jwt",
+    strategy: "jwt" as const,
     maxAge: 30 * 24 * 60 * 60,
   },
-});
+};
 
+// Create and export the handler
+export const handler = NextAuth(authOptions);
+
+// Export function to get server session
 export async function getAuthSession() {
-  return await import('next-auth').then(mod => 
-    mod.getServerSession(handler)
-  );
+  const { getServerSession } = await import('next-auth');
+  return await getServerSession(authOptions);
 }
