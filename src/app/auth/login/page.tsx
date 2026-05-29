@@ -2,7 +2,6 @@
 
 // Combined sign in / sign up page backed by Aurora PostgreSQL via NextAuth.
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
@@ -31,19 +30,35 @@ export default function AuthPage() {
   }
 
   async function signInWithCredentials(emailValue: string, passwordValue: string) {
-    const result = await signIn('credentials', {
+    // Use the NextAuth credentials callback directly. The next-auth/react
+    // signIn() helper was not persisting the session cookie reliably in this
+    // setup, whereas posting to the callback endpoint does. We fetch the CSRF
+    // token first, then submit credentials.
+    const { csrfToken } = await fetch('/api/auth/csrf').then((r) => r.json());
+
+    const body = new URLSearchParams({
+      csrfToken,
       email: emailValue,
       password: passwordValue,
-      redirect: false,
+      json: 'true',
     });
 
-    if (result?.error) {
+    const res = await fetch('/api/auth/callback/credentials', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body,
+      credentials: 'include',
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    // On failure NextAuth returns a url containing "error".
+    if (!res.ok || (typeof data?.url === 'string' && data.url.includes('error'))) {
       throw new Error('Invalid email or password');
     }
 
-    // Hard navigation so the SessionProvider re-reads the session cookie from
-    // the server. A soft router.push can land on the dashboard before the
-    // client session cache updates, which bounces the user back to login.
+    // Hard navigation so the SessionProvider re-reads the freshly set session
+    // cookie from the server and lands on the dashboard.
     window.location.href = '/dashboard';
   }
 
