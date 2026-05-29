@@ -1,5 +1,6 @@
 'use client';
 
+// Combined sign in / sign up page backed by Aurora PostgreSQL via NextAuth.
 import { useState } from 'react';
 import { signIn } from 'next-auth/react';
 import Link from 'next/link';
