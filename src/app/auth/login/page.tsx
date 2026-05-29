@@ -1,172 +1,264 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
-export default function LoginPage() {
-  const router = useRouter();
+type AuthMode = 'signin' | 'signup';
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+export default function AuthPage() {
+  const [mode, setMode] = useState<AuthMode>('signin');
+
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [hasGoogle, setHasGoogle] = useState(false);
 
-  useEffect(() => {
-    // Check if Google provider is available
-    fetch('/api/auth/providers')
-      .then((res) => res.json())
-      .then((providers) => {
-        setHasGoogle(!!providers.google);
-      })
-      .catch((err) => {
-        console.error('[v0] Error fetching providers:', err);
-      });
-  }, []);
-
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function switchMode(next: AuthMode) {
+    setMode(next);
     setError('');
+    setPassword('');
+    setConfirmPassword('');
+  }
 
-    // Validate required fields
+  async function signInWithCredentials(emailValue: string, passwordValue: string) {
+    const result = await signIn('credentials', {
+      email: emailValue,
+      password: passwordValue,
+      redirect: false,
+    });
+
+    if (result?.error) {
+      throw new Error('Invalid email or password');
+    }
+
+    // Hard navigation so the SessionProvider re-reads the session cookie from
+    // the server. A soft router.push can land on the dashboard before the
+    // client session cache updates, which bounces the user back to login.
+    window.location.href = '/dashboard';
+  }
+
+  async function handleSignIn() {
     if (!email.trim() || !password.trim()) {
       setError('Email and password are required');
       return;
     }
-
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       setError('Please enter a valid email address');
       return;
     }
 
     setIsLoading(true);
-
     try {
-      const result = await signIn('credentials', {
-        email,
-        password,
-        redirect: false,
+      await signInWithCredentials(email, password);
+    } catch (err) {
+      console.error('[v0] Sign in error:', err);
+      setError(err instanceof Error ? err.message : 'Unable to sign in');
+      setIsLoading(false);
+    }
+  }
+
+  async function handleSignUp() {
+    if (!name.trim() || !email.trim() || !password.trim()) {
+      setError('All fields are required');
+      return;
+    }
+    if (!emailRegex.test(email)) {
+      setError('Please enter a valid email address');
+      return;
+    }
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, password }),
       });
 
-      if (result?.error) {
-        setError(result.error || 'Invalid credentials');
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Could not create your account');
         setIsLoading(false);
-      } else if (result?.ok) {
-        router.push('/dashboard');
+        return;
       }
+
+      // Account created — sign the user straight in and go to the dashboard.
+      await signInWithCredentials(email, password);
     } catch (err) {
-      console.error('[v0] Login error:', err);
+      console.error('[v0] Sign up error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred');
       setIsLoading(false);
     }
   }
 
-  async function handleGoogleSignIn() {
-    setIsLoading(true);
-    try {
-      await signIn('google', { callbackUrl: '/dashboard' });
-    } catch (err) {
-      console.error('[v0] Google sign in error:', err);
-      setError(err instanceof Error ? err.message : 'Google sign in failed');
-      setIsLoading(false);
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError('');
+    if (mode === 'signin') {
+      handleSignIn();
+    } else {
+      handleSignUp();
     }
   }
 
+  const isSignup = mode === 'signup';
+
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center px-4 sm:px-6 lg:px-8">
+    <main className="min-h-screen bg-black flex items-center justify-center px-4 py-12 sm:px-6 lg:px-8">
       <div className="w-full max-w-md">
-        <div className="bg-gray-900 rounded-lg p-8 border border-gray-800">
-          <h1 className="text-3xl font-bold text-white mb-2">Welcome Back</h1>
-          <p className="text-gray-300 mb-8">Sign in to your account</p>
+        {/* Brand */}
+        <div className="mb-8 text-center">
+          <Link href="/" className="text-2xl font-bold text-white">
+            Value<span className="text-blue-500">-</span>Connection
+          </Link>
+          <p className="mt-2 text-sm text-gray-400">
+            {isSignup
+              ? 'Create your account to get started'
+              : 'Sign in to access your dashboard'}
+          </p>
+        </div>
+
+        <div className="rounded-2xl border border-gray-800 bg-gray-900 p-6 sm:p-8">
+          {/* Tabs */}
+          <div
+            role="tablist"
+            aria-label="Authentication options"
+            className="mb-6 grid grid-cols-2 gap-1 rounded-lg bg-gray-800 p-1"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!isSignup}
+              onClick={() => switchMode('signin')}
+              disabled={isLoading}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                !isSignup
+                  ? 'bg-white text-black'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              Sign In
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={isSignup}
+              onClick={() => switchMode('signup')}
+              disabled={isLoading}
+              className={`rounded-md px-4 py-2 text-sm font-medium transition-colors ${
+                isSignup
+                  ? 'bg-white text-black'
+                  : 'text-gray-300 hover:text-white'
+              }`}
+            >
+              Sign Up
+            </button>
+          </div>
 
           {error && (
-            <div className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-              <p className="text-red-300 text-sm">{error}</p>
+            <div
+              role="alert"
+              className="mb-4 rounded-lg border border-red-500/20 bg-red-500/10 p-3"
+            >
+              <p className="text-sm text-red-300">{error}</p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 mb-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Email Address
-              </label>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignup && (
               <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@example.com"
+                label="Full Name"
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Your name"
                 disabled={isLoading}
+                autoComplete="name"
                 required
               />
-            </div>
+            )}
 
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Password
-              </label>
+            <Input
+              label="Email Address"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              disabled={isLoading}
+              autoComplete="email"
+              required
+            />
+
+            <Input
+              label="Password"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              disabled={isLoading}
+              autoComplete={isSignup ? 'new-password' : 'current-password'}
+              helperText={isSignup ? 'At least 8 characters' : undefined}
+              required
+            />
+
+            {isSignup && (
               <Input
+                label="Confirm Password"
                 type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
                 placeholder="••••••••"
                 disabled={isLoading}
+                autoComplete="new-password"
                 required
               />
-            </div>
+            )}
 
-            <Button
-              type="submit"
-              fullWidth
-              disabled={isLoading}
-            >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+            <Button type="submit" fullWidth disabled={isLoading}>
+              {isLoading ? (
+                <span className="flex items-center justify-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  {isSignup ? 'Creating account...' : 'Signing in...'}
+                </span>
+              ) : isSignup ? (
+                'Create Account'
+              ) : (
+                'Sign In'
+              )}
             </Button>
           </form>
 
-          <div className="relative mb-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-700"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-gray-900 text-gray-400">Or continue with</span>
-            </div>
-          </div>
-
-          {hasGoogle ? (
-            <Button
+          <p className="mt-6 text-center text-sm text-gray-400">
+            {isSignup ? 'Already have an account?' : "Don't have an account?"}{' '}
+            <button
               type="button"
-              variant="outline"
-              fullWidth
-              onClick={handleGoogleSignIn}
+              onClick={() => switchMode(isSignup ? 'signin' : 'signup')}
               disabled={isLoading}
+              className="font-medium text-blue-500 hover:text-blue-400"
             >
-              Sign in with Google
-            </Button>
-          ) : (
-            <p className="text-sm text-gray-500 text-center py-4">
-              Google login not configured
-            </p>
-          )}
-
-          <p className="text-center text-sm text-gray-400 mt-6">
-            Don&apos;t have an account?{' '}
-            <Link href="/auth/signup" className="text-blue-500 hover:text-blue-400">
-              Sign up
-            </Link>
-          </p>
-
-          <p className="text-center text-sm text-gray-400 mt-4">
-            <Link href="/auth/forgot-password" className="text-blue-500 hover:text-blue-400">
-              Forgot password?
-            </Link>
+              {isSignup ? 'Sign in' : 'Sign up'}
+            </button>
           </p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
