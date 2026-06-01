@@ -100,66 +100,108 @@ export async function aggregateMetricsFromEvents(
   hour?: number
 ): Promise<WebsiteMetrics> {
   let whereClause = "website_id = $1 AND DATE(created_at) = $2";
-  let params: any[] = [websiteId, date];
-  
+  const params: any[] = [websiteId, date];
+
   if (hour !== undefined) {
     whereClause += ` AND EXTRACT(HOUR FROM created_at) = $3`;
     params.push(hour);
   }
-  
-  // Aggregate events
+
+  // Aggregate raw events into real metrics.
+  // - visitors: distinct visitors
+  // - pageviews: number of pageview events
+  // - sessions: distinct sessions
+  // - device + traffic-source buckets are counted by distinct session
+  // - traffic source is derived from the referrer string
   const eventsResult = await query(
-    `SELECT 
-       COUNT(DISTINCT session_id) as sessions,
-       COUNT(*) as pageviews,
-       COUNT(DISTINCT CASE WHEN device_type = 'desktop' THEN session_id END) as desktop_sessions,
-       COUNT(DISTINCT CASE WHEN device_type = 'mobile' THEN session_id END) as mobile_sessions,
-       COUNT(DISTINCT CASE WHEN device_type = 'tablet' THEN session_id END) as tablet_sessions,
-       AVG(session_duration) as avg_session_duration
+    `SELECT
+       COUNT(DISTINCT visitor_id) AS visitors,
+       COUNT(*) FILTER (WHERE event_type = 'pageview') AS pageviews,
+       COUNT(DISTINCT session_id) AS sessions,
+       AVG(session_duration) AS avg_session_duration,
+       COUNT(DISTINCT session_id) FILTER (WHERE device_type = 'desktop') AS desktop_sessions,
+       COUNT(DISTINCT session_id) FILTER (WHERE device_type = 'mobile') AS mobile_sessions,
+       COUNT(DISTINCT session_id) FILTER (WHERE device_type = 'tablet') AS tablet_sessions,
+       COUNT(DISTINCT session_id) FILTER (WHERE referrer ~* 'google|bing|yahoo|duckduckgo|baidu|ecosia') AS organic_sessions,
+       COUNT(DISTINCT session_id) FILTER (WHERE referrer IS NULL OR referrer = '') AS direct_sessions,
+       COUNT(DISTINCT session_id) FILTER (WHERE referrer ~* 'facebook|twitter|instagram|linkedin|t\\.co|youtube|reddit|pinterest|tiktok') AS social_sessions,
+       COUNT(DISTINCT session_id) FILTER (
+         WHERE referrer IS NOT NULL AND referrer <> ''
+         AND referrer !~* 'google|bing|yahoo|duckduckgo|baidu|ecosia|facebook|twitter|instagram|linkedin|t\\.co|youtube|reddit|pinterest|tiktok'
+       ) AS referral_sessions
      FROM tracking_events
      WHERE ${whereClause}`,
     params
   );
-  
+
   const aggData = eventsResult.rows[0] || {};
-  
-  // Insert or update metrics
+
+  // Remove any existing aggregate row for this slot first. We cannot rely on
+  // ON CONFLICT because metric_hour is NULL for daily rows and Postgres treats
+  // NULLs as distinct in unique constraints, which would create duplicates.
+  if (hour === undefined) {
+    await query(
+      'DELETE FROM website_metrics WHERE website_id = $1 AND metric_date = $2 AND metric_hour IS NULL',
+      [websiteId, date]
+    );
+  } else {
+    await query(
+      'DELETE FROM website_metrics WHERE website_id = $1 AND metric_date = $2 AND metric_hour = $3',
+      [websiteId, date, hour]
+    );
+  }
+
   const metricsResult = await query(
-    `INSERT INTO website_metrics 
-     (website_id, metric_date, metric_hour, visitors, pageviews, sessions, avg_session_duration, 
-      desktop_traffic, mobile_traffic, tablet_traffic, organic_traffic, direct_traffic, 
+    `INSERT INTO website_metrics
+     (website_id, metric_date, metric_hour, visitors, pageviews, sessions, avg_session_duration,
+      desktop_traffic, mobile_traffic, tablet_traffic, organic_traffic, direct_traffic,
       referral_traffic, social_traffic, paid_traffic, bounce_rate, conversion_rate)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, 0, 0)
-     ON CONFLICT (website_id, metric_date, metric_hour) DO UPDATE SET
-       visitors = EXCLUDED.visitors,
-       pageviews = EXCLUDED.pageviews,
-       sessions = EXCLUDED.sessions,
-       avg_session_duration = EXCLUDED.avg_session_duration,
-       desktop_traffic = EXCLUDED.desktop_traffic,
-       mobile_traffic = EXCLUDED.mobile_traffic,
-       tablet_traffic = EXCLUDED.tablet_traffic,
-       updated_at = NOW()
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, 0, 0, 0)
      RETURNING *`,
     [
       websiteId,
       date,
-      hour || null,
-      aggData.sessions || 0,
-      aggData.pageviews || 0,
-      aggData.sessions || 0,
-      aggData.avg_session_duration || 0,
-      aggData.desktop_sessions || 0,
-      aggData.mobile_sessions || 0,
-      aggData.tablet_sessions || 0,
-      0, // organic_traffic (will be calculated)
-      0, // direct_traffic (will be calculated)
-      0, // referral_traffic (will be calculated)
-      0, // social_traffic (will be calculated)
-      0, // paid_traffic (will be calculated)
+      hour ?? null,
+      Number(aggData.visitors) || 0,
+      Number(aggData.pageviews) || 0,
+      Number(aggData.sessions) || 0,
+      Number(aggData.avg_session_duration) || 0,
+      Number(aggData.desktop_sessions) || 0,
+      Number(aggData.mobile_sessions) || 0,
+      Number(aggData.tablet_sessions) || 0,
+      Number(aggData.organic_sessions) || 0,
+      Number(aggData.direct_sessions) || 0,
+      Number(aggData.referral_sessions) || 0,
+      Number(aggData.social_sessions) || 0,
     ]
   );
-  
+
   return metricsResult.rows[0];
+}
+
+// Aggregate every day that has tracking events within the window. This lets
+// the dashboard reflect freshly received events without waiting for a cron job.
+export async function aggregateRecentDays(
+  websiteId: string,
+  days: number = 30
+): Promise<number> {
+  const datesResult = await query(
+    `SELECT DISTINCT DATE(created_at) AS d
+     FROM tracking_events
+     WHERE website_id = $1
+     AND created_at >= CURRENT_DATE - INTERVAL '${days} days'
+     ORDER BY d DESC`,
+    [websiteId]
+  );
+
+  for (const row of datesResult.rows) {
+    const raw = row.d;
+    const dateStr =
+      raw instanceof Date ? raw.toISOString().split('T')[0] : String(raw).split('T')[0];
+    await aggregateMetricsFromEvents(websiteId, dateStr);
+  }
+
+  return datesResult.rows.length;
 }
 
 export async function getWebsiteMetrics(

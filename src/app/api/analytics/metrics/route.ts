@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAuthSession } from '@/lib/auth';
-import { getWebsiteMetrics } from '@/lib/analytics';
+import { getWebsiteMetrics, aggregateRecentDays } from '@/lib/analytics';
 import { query } from '@/lib/db';
 
 export async function GET(request: NextRequest) {
@@ -36,6 +36,15 @@ export async function GET(request: NextRequest) {
         { status: 'error', message: 'Website not found or unauthorized' },
         { status: 404 }
       );
+    }
+
+    // Roll up any freshly received tracking events into daily metrics before
+    // reading, so the dashboard always reflects the latest data. A failure here
+    // should not block returning whatever is already aggregated.
+    try {
+      await aggregateRecentDays(websiteId, days);
+    } catch (aggError) {
+      console.error('[v0] Aggregate-on-read failed:', aggError);
     }
 
     const metrics = await getWebsiteMetrics(websiteId, days);

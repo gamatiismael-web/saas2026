@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { TrendingUp, TrendingDown, Users, Eye, Clock, PercentSquare, Plus, Copy, Check } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, Eye, Clock, PercentSquare, Plus, Copy, Check, RefreshCw } from 'lucide-react';
 import { useWebsites, useWebsiteMetrics } from '@/hooks/useAnalytics';
 import { AddWebsiteModal } from '@/components/analytics/AddWebsiteModal';
 
@@ -43,27 +43,53 @@ export function WebsiteMetricsTab() {
   const [copiedScriptId, setCopiedScriptId] = useState(false);
 
   const selectedWebsite = websites?.find(w => w.id === selectedWebsiteId) || websites?.[0];
-  const { metrics, lastUpdated, loading: metricsLoading } = useWebsiteMetrics(selectedWebsite?.id);
+  const { metrics, lastUpdated, loading: metricsLoading, refetch: refetchMetrics } = useWebsiteMetrics(selectedWebsite?.id);
 
-  // Mock data for demo - in production this would come from metrics object
+  // `metrics` is an array of daily rows. Reduce it into real totals for the
+  // selected period. Numeric columns can arrive as strings from pg, so coerce.
+  const num = (v: unknown) => Number(v) || 0;
+  const totals = (metrics || []).reduce(
+    (acc, m) => {
+      acc.visitors += num(m.visitors);
+      acc.pageviews += num(m.pageviews);
+      acc.sessions += num(m.sessions);
+      acc.durationWeighted += num(m.avg_session_duration) * num(m.sessions);
+      acc.organic += num(m.organic_traffic);
+      acc.direct += num(m.direct_traffic);
+      acc.social += num(m.social_traffic);
+      acc.referral += num(m.referral_traffic);
+      acc.desktop += num(m.desktop_traffic);
+      acc.mobile += num(m.mobile_traffic);
+      acc.tablet += num(m.tablet_traffic);
+      return acc;
+    },
+    { visitors: 0, pageviews: 0, sessions: 0, durationWeighted: 0, organic: 0, direct: 0, social: 0, referral: 0, desktop: 0, mobile: 0, tablet: 0 }
+  );
+
+  const avgDurationSecs = totals.sessions > 0 ? Math.round(totals.durationWeighted / totals.sessions) : 0;
+  const hasData = totals.visitors > 0 || totals.pageviews > 0;
+
   const displayMetrics = {
-    visitors: { value: metrics?.visitors || 12453, change: 12 },
-    pageviews: { value: metrics?.pageviews || 45230, change: 8 },
-    avgSessionDuration: { value: metrics?.avg_session_duration ? `${Math.floor(metrics.avg_session_duration / 60)}m ${Math.floor(metrics.avg_session_duration % 60)}s` : '2m 34s', change: 5 },
-    bounceRate: { value: metrics?.bounce_rate ? `${metrics.bounce_rate.toFixed(0)}%` : '42%', change: -3 },
+    visitors: totals.visitors,
+    pageviews: totals.pageviews,
+    avgSessionDuration: `${Math.floor(avgDurationSecs / 60)}m ${avgDurationSecs % 60}s`,
+    sessions: totals.sessions,
   };
 
+  const sourceTotal = totals.organic + totals.direct + totals.social + totals.referral;
+  const pct = (part: number, whole: number) => (whole > 0 ? (part / whole) * 100 : 0);
   const trafficSources = [
-    { source: 'Organic Search', visitors: metrics?.organic_traffic || 6200, percentage: metrics?.organic_traffic ? ((metrics.organic_traffic / (metrics.visitors || 1)) * 100) : 49.8 },
-    { source: 'Direct', visitors: metrics?.direct_traffic || 2814, percentage: metrics?.direct_traffic ? ((metrics.direct_traffic / (metrics.visitors || 1)) * 100) : 22.6 },
-    { source: 'Social Media', visitors: metrics?.social_traffic || 2091, percentage: metrics?.social_traffic ? ((metrics.social_traffic / (metrics.visitors || 1)) * 100) : 16.8 },
-    { source: 'Referral', visitors: metrics?.referral_traffic || 1348, percentage: metrics?.referral_traffic ? ((metrics.referral_traffic / (metrics.visitors || 1)) * 100) : 10.8 },
+    { source: 'Organic Search', visitors: totals.organic, percentage: pct(totals.organic, sourceTotal) },
+    { source: 'Direct', visitors: totals.direct, percentage: pct(totals.direct, sourceTotal) },
+    { source: 'Social Media', visitors: totals.social, percentage: pct(totals.social, sourceTotal) },
+    { source: 'Referral', visitors: totals.referral, percentage: pct(totals.referral, sourceTotal) },
   ];
 
+  const deviceTotal = totals.desktop + totals.mobile + totals.tablet;
   const deviceBreakdown = [
-    { device: 'Desktop', visitors: metrics?.desktop_traffic || 7250, percentage: metrics?.desktop_traffic ? ((metrics.desktop_traffic / (metrics.visitors || 1)) * 100) : 58.2 },
-    { device: 'Mobile', visitors: metrics?.mobile_traffic || 4380, percentage: metrics?.mobile_traffic ? ((metrics.mobile_traffic / (metrics.visitors || 1)) * 100) : 35.1 },
-    { device: 'Tablet', visitors: metrics?.tablet_traffic || 823, percentage: metrics?.tablet_traffic ? ((metrics.tablet_traffic / (metrics.visitors || 1)) * 100) : 6.6 },
+    { device: 'Desktop', visitors: totals.desktop, percentage: pct(totals.desktop, deviceTotal) },
+    { device: 'Mobile', visitors: totals.mobile, percentage: pct(totals.mobile, deviceTotal) },
+    { device: 'Tablet', visitors: totals.tablet, percentage: pct(totals.tablet, deviceTotal) },
   ];
 
   const copyTrackingScript = () => {
@@ -113,14 +139,25 @@ export function WebsiteMetricsTab() {
     <div className="space-y-8">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Website Metrics</h2>
-        <Button 
-          variant="outline"
-          size="sm"
-          onClick={() => setIsAddWebsiteOpen(true)}
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Add Website
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetchMetrics()}
+            disabled={metricsLoading}
+          >
+            <RefreshCw className={`h-4 w-4 mr-2 ${metricsLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsAddWebsiteOpen(true)}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Website
+          </Button>
+        </div>
       </div>
 
       {/* Website Selector */}
@@ -147,32 +184,42 @@ export function WebsiteMetricsTab() {
         </div>
       )}
 
+      {/* No data yet hint */}
+      {!metricsLoading && !hasData && (
+        <Card>
+          <CardBody className="py-6">
+            <p className="text-white font-semibold mb-1">No analytics data yet for {selectedWebsite?.domain}</p>
+            <p className="text-gray-400 text-sm">
+              Make sure the tracking script below is installed on your site, then visit a page. Events are
+              rolled up automatically — hit Refresh to pull in the latest. Numbers below reflect real tracked
+              data and will update as visitors arrive.
+            </p>
+          </CardBody>
+        </Card>
+      )}
+
       {/* Key Metrics */}
       <div>
         <h3 className="text-lg font-semibold text-white mb-4">Overview</h3>
         <div className="grid md:grid-cols-4 gap-6">
           <MetricCard
             label="Total Visitors"
-            value={displayMetrics.visitors.value}
-            change={displayMetrics.visitors.change}
+            value={displayMetrics.visitors}
             icon={<Users className="h-8 w-8" />}
           />
           <MetricCard
             label="Page Views"
-            value={displayMetrics.pageviews.value}
-            change={displayMetrics.pageviews.change}
+            value={displayMetrics.pageviews}
             icon={<Eye className="h-8 w-8" />}
           />
           <MetricCard
             label="Avg Session Duration"
-            value={displayMetrics.avgSessionDuration.value}
-            change={displayMetrics.avgSessionDuration.change}
+            value={displayMetrics.avgSessionDuration}
             icon={<Clock className="h-8 w-8" />}
           />
           <MetricCard
-            label="Bounce Rate"
-            value={displayMetrics.bounceRate.value}
-            change={displayMetrics.bounceRate.change}
+            label="Sessions"
+            value={displayMetrics.sessions}
             icon={<PercentSquare className="h-8 w-8" />}
           />
         </div>
