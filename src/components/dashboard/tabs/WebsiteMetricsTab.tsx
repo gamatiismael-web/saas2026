@@ -92,15 +92,15 @@ export function WebsiteMetricsTab() {
     { device: 'Tablet', visitors: totals.tablet, percentage: pct(totals.tablet, deviceTotal) },
   ];
 
+  const trackingOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com';
+  const trackingSnippet = selectedWebsite?.tracking_script_id
+    ? `<!-- ValueConnection Analytics -->
+<script async src="${trackingOrigin}/vc-analytics.js?id=${selectedWebsite.tracking_script_id}"><\/script>`
+    : '';
+
   const copyTrackingScript = () => {
-    if (selectedWebsite?.tracking_script_id) {
-      const script = `<!-- ValueConnection Analytics -->
-<script>
-  window.vc_api_endpoint = '${typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}';
-</script>
-<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}/vc-analytics.js?id=${selectedWebsite.tracking_script_id}"><\/script>`;
-      
-      navigator.clipboard.writeText(script);
+    if (trackingSnippet) {
+      navigator.clipboard.writeText(trackingSnippet);
       setCopiedScriptId(true);
       setTimeout(() => setCopiedScriptId(false), 2000);
     }
@@ -287,14 +287,11 @@ export function WebsiteMetricsTab() {
           </CardHeader>
           <CardBody className="space-y-4">
             <p className="text-gray-400">
-              To start tracking metrics on {selectedWebsite.domain}, add this script to your website&apos;s head or body tag:
+              To start tracking metrics on {selectedWebsite.domain}, add this script once to your website&apos;s
+              &lt;head&gt; tag. It will keep sending data automatically &mdash; no need to reinstall.
             </p>
             <div className="bg-black rounded-lg p-4 font-mono text-sm text-gray-300 overflow-x-auto border border-gray-800">
-              <code>{`<!-- ValueConnection Analytics -->
-<script>
-  window.vc_api_endpoint = '${typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}';
-</script>
-<script src="${typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com'}/vc-analytics.js?id=${selectedWebsite.tracking_script_id}"><\/script>`}</code>
+              <code>{trackingSnippet}</code>
             </div>
             <div className="flex items-center justify-between">
               <p className="text-gray-400 text-sm">

@@ -5,11 +5,37 @@
 (function() {
   'use strict';
 
-  // Configuration - User will replace this with their unique ID from dashboard
-  const API_ENDPOINT = window.vc_api_endpoint || 'http://localhost:3000';
-  const SCRIPT_URL = document.currentScript?.src || '';
-  const TRACKING_SCRIPT_ID = new URL(SCRIPT_URL).searchParams.get('id') || '{{TRACKING_SCRIPT_ID}}';
-  
+  // The URL this script was loaded from, e.g.
+  // https://your-app.vercel.app/vc-analytics.js?id=vc_xxx
+  const SCRIPT_URL = (document.currentScript && document.currentScript.src) || '';
+
+  // Resolve the API endpoint. Priority:
+  //   1. An explicit window.vc_api_endpoint override (advanced/manual use)
+  //   2. The origin this very script was served from (auto-detected) — this is
+  //      the dashboard app's domain, which is exactly where events should go.
+  //   3. localhost as a last resort for local development only.
+  function resolveEndpoint() {
+    if (window.vc_api_endpoint) return window.vc_api_endpoint;
+    try {
+      if (SCRIPT_URL) return new URL(SCRIPT_URL).origin;
+    } catch (e) {
+      /* fall through */
+    }
+    return 'http://localhost:3000';
+  }
+
+  const API_ENDPOINT = resolveEndpoint();
+
+  // Read the tracking ID from the ?id= query param on the script src.
+  let TRACKING_SCRIPT_ID = '{{TRACKING_SCRIPT_ID}}';
+  try {
+    if (SCRIPT_URL) {
+      TRACKING_SCRIPT_ID = new URL(SCRIPT_URL).searchParams.get('id') || '{{TRACKING_SCRIPT_ID}}';
+    }
+  } catch (e) {
+    /* keep placeholder */
+  }
+
   if (!TRACKING_SCRIPT_ID || TRACKING_SCRIPT_ID === '{{TRACKING_SCRIPT_ID}}') {
     console.warn('[VC Analytics] Tracking script ID not configured');
     return;
