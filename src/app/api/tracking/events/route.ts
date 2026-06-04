@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { recordTrackingEvent, logDataSync } from '@/lib/analytics';
+import { recordTrackingEvent } from '@/lib/analytics';
 
 // Tracking events are sent cross-origin from the customer's website, so every
 // response (including the POST result) must carry CORS headers.

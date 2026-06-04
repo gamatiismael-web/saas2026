@@ -50,13 +50,13 @@ export async function POST(request: NextRequest) {
           continue;
         }
 
-        // Test website connectivity
+        // Test website connectivity (fetch has no `timeout` option; use AbortController)
         const startTime = Date.now();
         try {
           const response = await fetch(website.url, {
             method: 'HEAD',
-            timeout: 10000,
             redirect: 'follow',
+            signal: AbortSignal.timeout(10000),
           });
 
           const duration = Date.now() - startTime;
