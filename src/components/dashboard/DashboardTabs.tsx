@@ -1,15 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { BarChart3, TrendingUp, Lightbulb, FileText, Settings, CreditCard, Users } from 'lucide-react';
+import { BarChart3, TrendingUp, Lightbulb, FileText, Settings, CreditCard, Users, Search } from 'lucide-react';
 import { WebsiteMetricsTab } from './tabs/WebsiteMetricsTab';
 import { SEORankingsTab } from './tabs/SEORankingsTab';
+import { SEORecommendationsTab } from './tabs/SEORecommendationsTab';
 import { AIRecommendationsTab } from './tabs/AIRecommendationsTab';
 import { ReportsTab } from './tabs/ReportsTab';
 import { SettingsTab } from './tabs/SettingsTab';
 import { BillingTab } from './tabs/BillingTab';
 
-type TabId = 'metrics' | 'seo' | 'ai' | 'reports' | 'settings' | 'billing';
+type TabId = 'metrics' | 'seo' | 'seo-recs' | 'ai' | 'reports' | 'settings' | 'billing';
 
 interface Tab {
   id: TabId;
@@ -20,6 +21,7 @@ interface Tab {
 const TABS: Tab[] = [
   { id: 'metrics', label: 'Website Metrics', icon: <BarChart3 className="h-4 w-4" /> },
   { id: 'seo', label: 'SEO Rankings', icon: <TrendingUp className="h-4 w-4" /> },
+  { id: 'seo-recs', label: 'SEO Recommendations', icon: <Search className="h-4 w-4" /> },
   { id: 'ai', label: 'AI Recommendations', icon: <Lightbulb className="h-4 w-4" /> },
   { id: 'reports', label: 'Reports & Exports', icon: <FileText className="h-4 w-4" /> },
   { id: 'settings', label: 'Settings', icon: <Settings className="h-4 w-4" /> },
@@ -61,6 +63,7 @@ export function DashboardTabs() {
         <div className="transition-opacity duration-200">
           {activeTab === 'metrics' && <WebsiteMetricsTab />}
           {activeTab === 'seo' && <SEORankingsTab />}
+          {activeTab === 'seo-recs' && <SEORecommendationsTab />}
           {activeTab === 'ai' && <AIRecommendationsTab />}
           {activeTab === 'reports' && <ReportsTab />}
           {activeTab === 'settings' && <SettingsTab />}
