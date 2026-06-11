@@ -14,7 +14,6 @@ export function WebsiteSelector({
   websites,
   selectedWebsite,
   onSelectWebsite,
-  loading = false,
 }: WebsiteSelectorProps) {
   const getStatusIcon = (website: Website) => {
     if (website.metrics_collection_status === 'active') {

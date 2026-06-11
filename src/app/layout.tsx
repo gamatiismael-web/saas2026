@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { AuthSessionProvider } from "@/components/providers/SessionProvider";
 import "./globals.css";
 
-const geistSans = Geist({ subsets: ["latin"] });
-const geistMono = Geist_Mono({ subsets: ["latin"] });
+const geistSans = Geist({ subsets: ["latin"], variable: "--font-geist-sans" });
+const geistMono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono" });
 
 export const metadata: Metadata = {
   title: "WebPilot - Website Audit & Optimization",
@@ -27,7 +27,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="bg-black" suppressHydrationWarning>
-      <body className={`${geistSans.className} antialiased`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} ${geistSans.className} antialiased`}>
         <AuthSessionProvider>
           {children}
         </AuthSessionProvider>

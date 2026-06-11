@@ -8,6 +8,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   size?: ButtonSize;
   children: ReactNode;
   fullWidth?: boolean;
+  loading?: boolean;
 }
 
 const variantStyles: Record<ButtonVariant, string> = {
@@ -30,6 +31,7 @@ export function Button({
   className = '',
   children,
   disabled,
+  loading = false,
   ...props
 }: ButtonProps) {
   return (
@@ -37,14 +39,21 @@ export function Button({
       className={`
         font-medium rounded-lg transition-all duration-200
         disabled:opacity-50 disabled:cursor-not-allowed
+        inline-flex items-center justify-center gap-2
         ${variantStyles[variant]}
         ${sizeStyles[size]}
         ${fullWidth ? 'w-full' : ''}
         ${className}
       `}
-      disabled={disabled}
+      disabled={disabled || loading}
       {...props}
     >
+      {loading && (
+        <span
+          className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent"
+          aria-hidden="true"
+        />
+      )}
       {children}
     </button>
   );

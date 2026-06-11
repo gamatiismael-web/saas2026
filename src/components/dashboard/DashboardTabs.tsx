@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { BarChart3, TrendingUp, Lightbulb, FileText, Settings, CreditCard, Users, Search } from 'lucide-react';
+import { BarChart3, TrendingUp, Lightbulb, FileText, Settings, CreditCard, Search } from 'lucide-react';
 import { WebsiteMetricsTab } from './tabs/WebsiteMetricsTab';
 import { SEORankingsTab } from './tabs/SEORankingsTab';
 import { SEORecommendationsTab } from './tabs/SEORecommendationsTab';
