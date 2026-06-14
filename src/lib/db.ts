@@ -5,11 +5,11 @@ import { attachDatabasePool } from '@vercel/functions'
 
 const signer = new Signer({
   credentials: awsCredentialsProvider({
-    roleArn: process.env.AWS_ROLE_ARN,
-    clientConfig: { region: process.env.AWS_REGION },
+    roleArn: process.env.AWS_ROLE_ARN!,
+    clientConfig: { region: process.env.AWS_REGION! },
   }),
-  region: process.env.AWS_REGION,
-  hostname: process.env.PGHOST,
+  region: process.env.AWS_REGION!,
+  hostname: process.env.PGHOST!,
   username: process.env.PGUSER || 'postgres',
   port: 5432,
 })
@@ -48,7 +48,7 @@ export async function initializeDatabase() {
   try {
     // All tables should already be created by the migration scripts
     // This is just a connection health check
-    const result = await query('SELECT 1')
+    await query('SELECT 1')
     console.log('[v0] Database connection verified')
   } catch (error) {
     console.error('[v0] Database connection error:', error)

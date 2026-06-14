@@ -177,7 +177,6 @@ export function useMetricsAggregation(websiteId: string | null) {
 
     setIsSyncing(true);
     setError(null);
-    const startTime = Date.now();
 
     try {
       const response = await fetch('/api/analytics/aggregate', {

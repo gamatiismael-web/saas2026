@@ -37,7 +37,7 @@ function MetricCard({ label, value, change, icon }: MetricCardProps) {
 }
 
 export function WebsiteMetricsTab() {
-  const { websites, loading: websitesLoading, refetch } = useWebsites();
+  const { websites, refetch } = useWebsites();
   const [selectedWebsiteId, setSelectedWebsiteId] = useState<string | null>(null);
   const [isAddWebsiteOpen, setIsAddWebsiteOpen] = useState(false);
   const [copiedScriptId, setCopiedScriptId] = useState(false);

@@ -5,7 +5,7 @@ import { query } from "@/lib/db";
 import bcrypt from "bcryptjs";
 
 // Build providers array - only include Google if credentials are provided
-const providers = [
+const providers: any[] = [
   CredentialsProvider({
     name: 'Credentials',
     credentials: {
@@ -61,7 +61,7 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
 export const authOptions = {
   providers,
   callbacks: {
-    async signIn({ user, account }) {
+    async signIn({ user, account }: { user: any; account: any }) {
       // For Google OAuth, create user in database if they don't exist
       if (account?.provider === 'google' && user.email) {
         try {
@@ -85,13 +85,13 @@ export const authOptions = {
       }
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user }: { token: any; user?: any }) {
       if (user) {
         token.id = user.id;
       }
       return token;
     },
-    async session({ session, token }) {
+    async session({ session, token }: { session: any; token: any }) {
       if (session.user) {
         (session.user as any).id = token.id as string;
       }

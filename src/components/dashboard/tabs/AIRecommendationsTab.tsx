@@ -1,6 +1,6 @@
 'use client';
 
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import { Card, CardBody } from '@/components/ui/Card';
 import { AlertCircle, CheckCircle2, Zap } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 
