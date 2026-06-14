@@ -92,10 +92,12 @@ export function WebsiteMetricsTab() {
     { device: 'Tablet', visitors: totals.tablet, percentage: pct(totals.tablet, deviceTotal) },
   ];
 
-  const trackingOrigin = typeof window !== 'undefined' ? window.location.origin : 'https://yourdomain.com';
+  // The snippet auto-detects the origin from the script src, so show the user
+  // what URL to use. In production, they copy the snippet from their deployed dashboard URL.
   const trackingSnippet = selectedWebsite?.tracking_script_id
     ? `<!-- ValueConnection Analytics -->
-<script async src="${trackingOrigin}/vc-analytics.js?id=${selectedWebsite.tracking_script_id}"><\/script>`
+<!-- Important: Copy this snippet from your deployed dashboard (not localhost) to get the correct URL -->
+<script async src="https://your-dashboard-domain.com/vc-analytics.js?id=${selectedWebsite.tracking_script_id}"><\/script>`
     : '';
 
   const copyTrackingScript = () => {

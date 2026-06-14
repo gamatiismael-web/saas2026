@@ -29,9 +29,17 @@ export async function POST(request: NextRequest) {
       { status: 200, headers: CORS_HEADERS }
     );
   } catch (error) {
-    console.error('[v0] Tracking event error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    console.error('[v0] Tracking event error:', errorMessage);
+    console.error('[v0] Error details:', error);
+    
+    // Return a more helpful error response
     return NextResponse.json(
-      { status: 'error', message: 'Failed to record event' },
+      {
+        status: 'error',
+        message: 'Failed to record event',
+        detail: errorMessage, // For debugging
+      },
       { status: 500, headers: CORS_HEADERS }
     );
   }

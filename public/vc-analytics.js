@@ -229,9 +229,29 @@
         },
         body: JSON.stringify(event),
         keepalive: true,
-      }).catch(err => {
-        console.error('[VC Analytics] Failed to send event:', err);
-        this.queue.push(event);
+      })
+        .then(res => {
+          if (!res.ok) {
+            return res.json().then(data => {
+              console.error('[VC Analytics] Event failed:', {
+                status: res.status,
+                tracking_script_id: TRACKING_SCRIPT_ID,
+                api_endpoint: API_ENDPOINT,
+                error: data.detail || data.message,
+              });
+            });
+          }
+          return res.json();
+        })
+        .catch(err => {
+          console.error('[VC Analytics] Failed to send event:', {
+            error: err.message,
+            api_endpoint: API_ENDPOINT,
+            tracking_script_id: TRACKING_SCRIPT_ID,
+          });
+          this.queue.push(event);
+        });
+    }
       });
     }
 
