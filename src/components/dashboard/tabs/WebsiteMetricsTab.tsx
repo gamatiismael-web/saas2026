@@ -3,10 +3,38 @@
 import { useState } from 'react';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Users, Plus, Copy, Check, RefreshCw } from 'lucide-react';
+import { TrendingUp, TrendingDown, Users, Eye, Clock, PercentSquare, Plus, Copy, Check, RefreshCw } from 'lucide-react';
 import { useWebsites, useWebsiteMetrics } from '@/hooks/useAnalytics';
 import { AddWebsiteModal } from '@/components/analytics/AddWebsiteModal';
-import { KPIStrip } from '@/components/dashboard/KPIStrip';
+
+interface MetricCardProps {
+  label: string;
+  value: string | number;
+  change?: number;
+  icon: React.ReactNode;
+}
+
+function MetricCard({ label, value, change, icon }: MetricCardProps) {
+  const isPositive = change ? change >= 0 : true;
+  
+  return (
+    <Card>
+      <CardBody className="flex items-start justify-between">
+        <div className="flex-1">
+          <p className="text-gray-400 text-sm mb-2">{label}</p>
+          <p className="text-3xl font-bold text-white">{value.toLocaleString()}</p>
+          {change !== undefined && (
+            <div className={`flex items-center gap-1 mt-2 text-sm ${isPositive ? 'text-green-400' : 'text-red-400'}`}>
+              {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+              <span>{Math.abs(change)}% vs last week</span>
+            </div>
+          )}
+        </div>
+        <div className="text-blue-400 opacity-70">{icon}</div>
+      </CardBody>
+    </Card>
+  );
+}
 
 export function WebsiteMetricsTab() {
   const { websites, refetch } = useWebsites();
@@ -83,11 +111,12 @@ export function WebsiteMetricsTab() {
   if (!websites || websites.length === 0) {
     return (
       <div className="space-y-8">
+        <h2 className="text-2xl font-bold text-white">Website Metrics</h2>
         <Card>
-          <CardBody className="flex flex-col items-center justify-center py-16 text-center">
+          <CardBody className="flex flex-col items-center justify-center py-12 text-center">
             <Users className="h-12 w-12 text-gray-400 mb-4" />
-            <p className="text-2xl font-bold text-white mb-2">No websites tracked yet</p>
-            <p className="text-gray-400 mb-8 max-w-sm">Add your first website to start tracking visitor metrics, traffic sources, and device breakdown.</p>
+            <p className="text-xl font-semibold text-white mb-2">No websites tracked yet</p>
+            <p className="text-gray-400 mb-6">Add your first website to start tracking metrics</p>
             <Button 
               variant="primary"
               onClick={() => setIsAddWebsiteOpen(true)}
@@ -110,23 +139,8 @@ export function WebsiteMetricsTab() {
 
   return (
     <div className="space-y-8">
-      {/* Website Selector and Controls */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
-        <div className="flex items-center gap-2 flex-wrap">
-          {websites.map((website) => (
-            <button
-              key={website.id}
-              onClick={() => setSelectedWebsiteId(website.id)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200 ${
-                selectedWebsite?.id === website.id
-                  ? 'bg-blue-500 text-white shadow-lg shadow-blue-500/20'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700 border border-gray-700'
-              }`}
-            >
-              {website.domain}
-            </button>
-          ))}
-        </div>
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-bold text-white">Website Metrics</h2>
         <div className="flex items-center gap-2">
           <Button
             variant="outline"
@@ -148,9 +162,26 @@ export function WebsiteMetricsTab() {
         </div>
       </div>
 
+      {/* Website Selector */}
+      <div className="flex items-center gap-2 flex-wrap">
+        {websites.map((website) => (
+          <button
+            key={website.id}
+            onClick={() => setSelectedWebsiteId(website.id)}
+            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+              selectedWebsite?.id === website.id
+                ? 'bg-blue-600 text-white'
+                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+            }`}
+          >
+            {website.domain}
+          </button>
+        ))}
+      </div>
+
       {/* Last Updated */}
       {lastUpdated && (
-        <div className="text-xs text-gray-500">
+        <div className="text-sm text-gray-400">
           Last updated: {new Date(lastUpdated).toLocaleString()}
         </div>
       )}
@@ -159,27 +190,44 @@ export function WebsiteMetricsTab() {
       {!metricsLoading && !hasData && (
         <Card>
           <CardBody className="py-6">
-            <p className="text-white font-semibold mb-2">No analytics data yet for {selectedWebsite?.domain}</p>
+            <p className="text-white font-semibold mb-1">No analytics data yet for {selectedWebsite?.domain}</p>
             <p className="text-gray-400 text-sm">
-              Make sure the tracking script below is installed on your site, then visit a page. Events are rolled up automatically — hit Refresh to pull in the latest.
+              Make sure the tracking script below is installed on your site, then visit a page. Events are
+              rolled up automatically — hit Refresh to pull in the latest. Numbers below reflect real tracked
+              data and will update as visitors arrive.
             </p>
           </CardBody>
         </Card>
       )}
 
-      {/* KPI Strip - Key Metrics */}
-      {hasData && (
-        <KPIStrip
-          metrics={[
-            { label: 'Total Visitors', value: displayMetrics.visitors, unit: 'visitors' },
-            { label: 'Pageviews', value: displayMetrics.pageviews, unit: 'views' },
-            { label: 'Sessions', value: displayMetrics.sessions, unit: 'sessions' },
-            { label: 'Avg. Duration', value: displayMetrics.avgSessionDuration, unit: 'per session' },
-          ]}
-        />
-      )}
+      {/* Key Metrics */}
+      <div>
+        <h3 className="text-lg font-semibold text-white mb-4">Overview</h3>
+        <div className="grid md:grid-cols-4 gap-6">
+          <MetricCard
+            label="Total Visitors"
+            value={displayMetrics.visitors}
+            icon={<Users className="h-8 w-8" />}
+          />
+          <MetricCard
+            label="Page Views"
+            value={displayMetrics.pageviews}
+            icon={<Eye className="h-8 w-8" />}
+          />
+          <MetricCard
+            label="Avg Session Duration"
+            value={displayMetrics.avgSessionDuration}
+            icon={<Clock className="h-8 w-8" />}
+          />
+          <MetricCard
+            label="Sessions"
+            value={displayMetrics.sessions}
+            icon={<PercentSquare className="h-8 w-8" />}
+          />
+        </div>
+      </div>
 
-      {/* Traffic Sources & Device Breakdown */}
+      {/* Traffic Sources */}
       <div className="grid lg:grid-cols-2 gap-8">
         <Card>
           <CardHeader>

@@ -4,22 +4,14 @@ interface CardProps {
   children: ReactNode;
   className?: string;
   hover?: boolean;
-  variant?: 'default' | 'stat' | 'elevated';
 }
 
-export function Card({ children, className = '', hover = false, variant = 'default' }: CardProps) {
-  const variantStyles = {
-    default: 'bg-gray-900 border border-gray-700 shadow-sm',
-    stat: 'bg-gradient-to-br from-gray-900 to-gray-950 border border-gray-700 shadow-md',
-    elevated: 'bg-gray-900 border border-gray-700 shadow-lg hover:shadow-xl',
-  };
-
+export function Card({ children, className = '', hover = false }: CardProps) {
   return (
     <div
       className={`
-        rounded-lg overflow-hidden
-        ${variantStyles[variant]}
-        ${hover ? 'hover:shadow-md transition-shadow duration-200 cursor-pointer' : 'transition-shadow duration-200'}
+        bg-gray-900 rounded-xl shadow-sm border border-gray-700 overflow-hidden
+        ${hover ? 'hover:shadow-md transition-shadow duration-200' : ''}
         ${className}
       `}
     >
@@ -31,12 +23,11 @@ export function Card({ children, className = '', hover = false, variant = 'defau
 interface CardHeaderProps {
   children: ReactNode;
   className?: string;
-  divider?: boolean;
 }
 
-export function CardHeader({ children, className = '', divider = true }: CardHeaderProps) {
+export function CardHeader({ children, className = '' }: CardHeaderProps) {
   return (
-    <div className={`px-6 py-4 ${divider ? 'border-b border-gray-800' : ''} ${className}`}>
+    <div className={`px-6 py-4 border-b border-gray-800 ${className}`}>
       {children}
     </div>
   );
